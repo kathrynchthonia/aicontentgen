@@ -1,58 +1,48 @@
-from typing import Optional, Union
-from uuid import UUID
-
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
-
-from app.models import User
-from app.schemas import UserCreate, UserUpdate
-from app.core.security import get_password_hash, verify_password
+from typing import Optional, List
+from sqlmodel import select, Session
+from app.models.schemas import User, UserCreate, UserUpdate
+from app.core.security import hash_password
 
 
-class CRUDUser:
-    async def get(self, db: AsyncSession, id: UUID) -> Optional[User]:
-        result = await db.execute(select(User).where(User.id == id))
-        return result.scalar_one_or_none()
-
-    async def get_by_email(self, db: AsyncSession, email: str) -> Optional[User]:
-        result = await db.execute(select(User).where(User.email == email))
-        return result.scalar_one_or_none()
-
-    async def get_multi(self, db: AsyncSession, skip=0, limit=100) -> list[User]:
-        result = await db.execute(select(User).offset(skip).limit(limit))
-        return result.scalars().all()
-
-    async def count(self, db: AsyncSession) -> int:
-        result = await db.execute(select(User))
-        return len(result.scalars().all())
-
-    async def create(self, db: AsyncSession, obj_in: UserCreate) -> User:
-        hashed_password = get_password_hash(obj_in.password)
-        db_obj = User(
-            email=obj_in.email,
-            full_name=obj_in.full_name,
-            hashed_password=hashed_password,
-        )
-        db.add(db_obj)
-        await db.commit()
-        await db.refresh(db_obj)
-        return db_obj
-
-    async def update(self, db: AsyncSession, db_obj: User, obj_in: Union[UserUpdate, dict]) -> User:
-        obj_data = db_obj.dict()
-        update_data = obj_in.dict(exclude_unset=True) if not isinstance(obj_in, dict) else obj_in
-
-        if update_data.get("password"):
-            update_data["hashed_password"] = get_password_hash(update_data.pop("password"))
-
-        for field in obj_data:
-            if field in update_data:
-                setattr(db_obj, field, update_data[field])
-
-        db.add(db_obj)
-        await db.commit()
-        await db.refresh(db_obj)
-        return db_obj
+def get_user_by_id(db: Session, user_id: str) -> Optional[User]:
+    return db.exec(select(User).where(User.id == user_id)).first()
 
 
-user = CRUDUser()
+def get_user_by_email(db: Session, email: str) -> Optional[User]:
+    return db.exec(select(User).where(User.email == email)).first()
+
+
+def get_users(db: Session, skip: int = 0, limit: int = 100) -> List[User]:
+    return db.exec(select(User).offset(skip).limit(limit)).all()
+
+
+def create_user(db: Session, user_create: UserCreate, hashed_password: str) -> User:
+    user = User(
+        email=user_create.email,
+        full_name=user_create.full_name,
+        hashed_password=hashed_password,
+        is_active=True,
+        is_superuser=user_create.is_superuser,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+
+def update_user(db: Session, db_user: User, user_in: UserUpdate) -> User:
+    user_data = user_in.dict(exclude_unset=True)
+    for field, value in user_data.items():
+        setattr(db_user, field, value)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+def delete_user(db: Session, user_id: str) -> None:
+    user = get_user_by_id(db, user_id)
+    if user:
+        db.delete(user)
+        db.commit()

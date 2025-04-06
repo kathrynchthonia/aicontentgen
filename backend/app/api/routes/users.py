@@ -55,7 +55,8 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
     """
     Create new user.
     """
-    user = crud.get_user_by_email(session=session, email=user_in.email)
+    hashed_password = get_password_hash(user_in.password)
+    user = crud.create_user(session=session, user_create=user_in, hashed_password=hashed_password)
     if user:
         raise HTTPException(
             status_code=400,
@@ -151,7 +152,8 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
             detail="The user with this email already exists in the system",
         )
     user_create = UserCreate.model_validate(user_in)
-    user = crud.create_user(session=session, user_create=user_create)
+    hashed_password = get_password_hash(user_in.password)
+    user = crud.create_user(session=session, user_create=user_create, hashed_password=hashed_password)
     return user
 
 
