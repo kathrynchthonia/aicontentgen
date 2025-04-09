@@ -5,11 +5,10 @@ from starlette.middleware.cors import CORSMiddleware
 
 from app.api.api_v1.api import api_router
 from app.core.config import settings
-
+from app.auth import router as auth_router  # Import the new auth router
 
 def custom_generate_unique_id(route: APIRoute) -> str:
     return f"{route.tags[0]}-{route.name}"
-
 
 if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
     sentry_sdk.init(dsn=str(settings.SENTRY_DSN), enable_tracing=True)
@@ -30,4 +29,8 @@ if settings.all_cors_origins:
         allow_headers=["*"],
     )
 
+# Include the authentication routes
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
+
+# Include the main API router
 app.include_router(api_router, prefix=settings.API_V1_STR)
