@@ -9,3 +9,4 @@ pyjwt
 python-multipart
 email-validator
 httpx
+pytest
