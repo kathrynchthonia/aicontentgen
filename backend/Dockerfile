@@ -6,6 +6,7 @@ ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     PATH="/app/.venv/bin:$PATH"
+    PYTHONPATH=/app
 
 # Set the working directory in the container
 WORKDIR /app/
