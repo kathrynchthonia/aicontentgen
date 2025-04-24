@@ -1,7 +1,7 @@
 from typing import Optional, List
 from sqlmodel import select, Session
-from app.models.schemas import User, UserCreate, UserUpdate
-from app.core.security import hash_password
+from app.models import User, UserCreate, UserUpdate
+from app.core.security import get_password_hash
 
 
 def get_user_by_id(db: Session, user_id: str) -> Optional[User]:
@@ -16,7 +16,8 @@ def get_users(db: Session, skip: int = 0, limit: int = 100) -> List[User]:
     return db.exec(select(User).offset(skip).limit(limit)).all()
 
 
-def create_user(db: Session, user_create: UserCreate, hashed_password: str) -> User:
+def create_user(db: Session, user_create: UserCreate) -> User:
+    hashed_password = get_password_hash(user_create.password)
     user = User(
         email=user_create.email,
         full_name=user_create.full_name,
@@ -28,7 +29,6 @@ def create_user(db: Session, user_create: UserCreate, hashed_password: str) -> U
     db.commit()
     db.refresh(user)
     return user
-
 
 
 def update_user(db: Session, db_user: User, user_in: UserUpdate) -> User:

@@ -1,8 +1,9 @@
 from sqlmodel import Session, create_engine, select
 
-from app import crud
 from app.core.config import settings
 from app.schemas import User, UserCreate
+from app.crud.user import create_user
+from app.core.security import get_password_hash  # ✅ Import added
 
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
@@ -30,4 +31,5 @@ def init_db(session: Session) -> None:
             password=settings.FIRST_SUPERUSER_PASSWORD,
             is_superuser=True,
         )
-        user = crud.create_user(session=session, user_create=user_in)
+        hashed_password = get_password_hash(user_in.password)  # ✅ Hash password
+        user = create_user(db=session, user_create=user_in, hashed_password=hashed_password)  # ✅ Use correct call
